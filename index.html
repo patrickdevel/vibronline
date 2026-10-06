@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>M3Play Web</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%B5%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
@@ -17,10 +18,10 @@
     </div>
 
     <nav class="nav-links">
-      <button class="nav-btn active" onclick="switchTab('home')">🏠 Start</button>
-      <button class="nav-btn" onclick="switchTab('search')">🔍 Suchen</button>
-      <button class="nav-btn" onclick="switchTab('library')">📚 Bibliothek</button>
-      <button class="nav-btn" onclick="switchTab('login')">👤 YouTube Login</button>
+      <button class="nav-btn active" onclick="switchTab('home', this)">🏠 Start</button>
+      <button class="nav-btn" onclick="switchTab('search', this)">🔍 Suchen</button>
+      <button class="nav-btn" onclick="switchTab('library', this)">📚 Bibliothek</button>
+      <button class="nav-btn" onclick="switchTab('login', this)">👤 YouTube Login</button>
     </nav>
   </aside>
 

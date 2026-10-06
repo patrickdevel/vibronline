@@ -2,12 +2,12 @@ const audio = document.getElementById('audio-element');
 let currentTrack = null;
 
 // Tab Wechseln
-function switchTab(tabName) {
+function switchTab(tabName, btn) {
   document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
   document.getElementById(`tab-${tabName}`).classList.add('active');
-  event.target.classList.add('active');
+  if (btn) btn.classList.add('active');
 
   if (tabName === 'home') loadHome();
 }
@@ -89,14 +89,30 @@ function playSong(track) {
   document.getElementById('player-title').innerText = track.title;
   document.getElementById('player-artist').innerText = track.artist;
 
-  audio.src = `/api/stream?id=${track.id}`;
-  audio.play();
-  document.getElementById('play-pause-btn').innerText = '⏸';
+  document.getElementById('seek-bar').value = 0;
+  document.getElementById('current-time').innerText = '0:00';
+  document.getElementById('duration-time').innerText = '0:00';
+
+  audio.src = `/api/stream?id=${encodeURIComponent(track.id)}`;
+  audio.play()
+    .then(() => { document.getElementById('play-pause-btn').innerText = '⏸'; })
+    .catch(err => {
+      // AbortError = Nutzer hat schnell einen anderen Song gewählt, kein echter Fehler
+      if (err.name !== 'AbortError') console.warn('Wiedergabe nicht möglich:', err.message);
+      document.getElementById('play-pause-btn').innerText = '▶';
+    });
 }
 
+// Fehler beim Laden des Streams abfangen (z.B. Server liefert 500)
+audio.onerror = () => {
+  document.getElementById('play-pause-btn').innerText = '▶';
+  document.getElementById('player-artist').innerText = 'Stream konnte nicht geladen werden';
+};
+
 function togglePlay() {
+  if (!audio.src) return;
   if (audio.paused) {
-    audio.play();
+    audio.play().catch(() => {});
     document.getElementById('play-pause-btn').innerText = '⏸';
   } else {
     audio.pause();
@@ -107,7 +123,7 @@ function togglePlay() {
 // Audio Fortschritt
 audio.ontimeupdate = () => {
   const seek = document.getElementById('seek-bar');
-  if (audio.duration) {
+  if (Number.isFinite(audio.duration) && audio.duration > 0) {
     seek.value = (audio.currentTime / audio.duration) * 100;
     document.getElementById('current-time').innerText = formatTime(audio.currentTime);
     document.getElementById('duration-time').innerText = formatTime(audio.duration);
@@ -116,7 +132,20 @@ audio.ontimeupdate = () => {
 
 function seekAudio() {
   const seek = document.getElementById('seek-bar');
+  // duration ist NaN/Infinity, solange nichts geladen ist -> currentTime würde einen Fehler werfen
+  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
   audio.currentTime = (seek.value / 100) * audio.duration;
+}
+
+// YouTube-Cookie lokal speichern (Formular im Login-Tab)
+function saveCookie(e) {
+  e.preventDefault();
+  try {
+    localStorage.setItem('yt-cookie', document.getElementById('cookie-input').value.trim());
+    alert('Cookie gespeichert.');
+  } catch (err) {
+    alert('Cookie konnte nicht gespeichert werden.');
+  }
 }
 
 function changeVolume() {
