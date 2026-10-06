@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>M3Play Web</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+
+  <!-- Seitenleiste Navigation -->
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">🎵</span>
+      <h2>M3Play Web</h2>
+    </div>
+
+    <nav class="nav-links">
+      <button class="nav-btn active" onclick="switchTab('home')">🏠 Start</button>
+      <button class="nav-btn" onclick="switchTab('search')">🔍 Suchen</button>
+      <button class="nav-btn" onclick="switchTab('library')">📚 Bibliothek</button>
+      <button class="nav-btn" onclick="switchTab('login')">👤 YouTube Login</button>
+    </nav>
+  </aside>
+
+  <!-- Hauptinhalt -->
+  <main class="content">
+
+    <!-- STARTSEITE -->
+    <section id="tab-home" class="tab-content active">
+      <h1>Willkommen bei M3Play</h1>
+      <p class="subtitle">Deine Lieblingsmusik direkt im Web streamen</p>
+      <div id="home-feed" class="sections-container">
+        <p class="loading-text">Lade Musik-Empfehlungen...</p>
+      </div>
+    </section>
+
+    <!-- SUCHSEITE -->
+    <section id="tab-search" class="tab-content">
+      <h1>Suche</h1>
+      <form onsubmit="handleSearch(event)" class="search-form">
+        <input type="text" id="search-input" placeholder="Songs, Künstler oder Alben suchen..." required>
+        <button type="submit">Suchen</button>
+      </form>
+      <div id="search-results" class="results-list"></div>
+    </section>
+
+    <!-- BIBLIOTHEK -->
+    <section id="tab-library" class="tab-content">
+      <h1>Bibliothek</h1>
+      <div class="empty-state">
+        <p>🎵 Füge unter <strong>YouTube Login</strong> deinen Cookie ein, um Playlists zu laden.</p>
+      </div>
+    </section>
+
+    <!-- LOGIN -->
+    <section id="tab-login" class="tab-content">
+      <h1>YouTube Music Login</h1>
+      <p class="subtitle">Füge deinen YouTube-Cookie ein, um auf deine privaten Playlists zuzugreifen.</p>
+      <form onsubmit="saveCookie(event)" class="login-form">
+        <textarea id="cookie-input" rows="5" placeholder="SAPISID=...; HSID=...;" required></textarea>
+        <button type="submit">Cookie speichern</button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- Player am unteren Rand -->
+  <div id="player-bar" class="player-bar hidden">
+    <div class="track-info">
+      <img id="player-thumb" src="" alt="Thumbnail">
+      <div>
+        <p id="player-title" class="track-title">-</p>
+        <p id="player-artist" class="track-artist">-</p>
+      </div>
+    </div>
+
+    <div class="player-controls">
+      <button id="play-pause-btn" onclick="togglePlay()">▶</button>
+      <div class="progress-container">
+        <span id="current-time">0:00</span>
+        <input type="range" id="seek-bar" value="0" min="0" max="100" oninput="seekAudio()">
+        <span id="duration-time">0:00</span>
+      </div>
+    </div>
+
+    <div class="volume-control">
+      <span>🔊</span>
+      <input type="range" id="volume-bar" value="80" min="0" max="100" oninput="changeVolume()">
+    </div>
+  </div>
+
+  <audio id="audio-element"></audio>
+
+</body>
+</html>
