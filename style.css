@@ -13,7 +13,6 @@ body {
   overflow: hidden;
 }
 
-/* Sidebar */
 .sidebar {
   width: 240px;
   background-color: #1a1a1e;
@@ -60,7 +59,6 @@ body {
   color: #ffffff;
 }
 
-/* Main Content */
 .content {
   flex: 1;
   padding: 32px;
@@ -86,7 +84,6 @@ h1 {
   margin-bottom: 24px;
 }
 
-/* Home Grid */
 .sections-container {
   display: flex;
   flex-direction: column;
@@ -111,6 +108,7 @@ h1 {
   cursor: pointer;
   transition: transform 0.2s, background-color 0.2s;
   border: 1px solid #2b2b30;
+  position: relative;
 }
 
 .card:hover {
@@ -143,7 +141,41 @@ h1 {
   text-overflow: ellipsis;
 }
 
-/* Search */
+/* Playlist Header */
+.back-btn {
+  background-color: #2b2b30;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.playlist-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.playlist-header img {
+  width: 160px;
+  height: 160px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.badge {
+  background-color: #e5484d;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Search & Track List */
 .search-form {
   display: flex;
   gap: 12px;
