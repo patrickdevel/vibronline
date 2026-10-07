@@ -1,13 +1,12 @@
 const audio = document.getElementById('audio-element');
 let currentTrack = null;
 
-// Tab Wechseln
-function switchTab(tabName, btn) {
+function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
 
-  document.getElementById(`tab-${tabName}`).classList.add('active');
-  if (btn) btn.classList.add('active');
+  const targetTab = document.getElementById(`tab-${tabName}`);
+  if (targetTab) targetTab.classList.add('active');
 
   if (tabName === 'home') loadHome();
 }
@@ -34,7 +33,7 @@ async function loadHome() {
       sec.items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
-        card.onclick = () => playSong(item);
+        card.onclick = () => onCardClick(item);
         card.innerHTML = `
           <img src="${item.thumbnail}" referrerpolicy="no-referrer" alt="${item.title}">
           <p class="card-title">${item.title}</p>
@@ -48,6 +47,50 @@ async function loadHome() {
     });
   } catch (err) {
     container.innerHTML = '<p>Fehler beim Laden der Inhalte.</p>';
+  }
+}
+
+// Klick auf Karte (Song vs Playlist)
+function onCardClick(item) {
+  if (item.type === 'playlist' || item.id.startsWith('VL') || item.id.startsWith('PL') || item.id.startsWith('RD') || item.id.startsWith('MPRE')) {
+    openPlaylist(item.id);
+  } else {
+    playSong(item);
+  }
+}
+
+// Playlist Screen öffnen
+async function openPlaylist(playlistId) {
+  switchTab('playlist');
+  document.getElementById('playlist-title').innerText = 'Lade Playlist...';
+  document.getElementById('playlist-tracks').innerHTML = '<p>Tracks werden geladen...</p>';
+
+  try {
+    const res = await fetch(`/api/playlist?id=${encodeURIComponent(playlistId)}`);
+    const data = await res.json();
+
+    document.getElementById('playlist-cover').src = data.thumbnail;
+    document.getElementById('playlist-title').innerText = data.title;
+    document.getElementById('playlist-count').innerText = `${data.tracks.length} Songs`;
+
+    const container = document.getElementById('playlist-tracks');
+    container.innerHTML = '';
+
+    data.tracks.forEach(track => {
+      const item = document.createElement('div');
+      item.className = 'track-item';
+      item.onclick = () => playSong(track);
+      item.innerHTML = `
+        <img src="${track.thumbnail}" referrerpolicy="no-referrer" alt="${track.title}">
+        <div>
+          <p class="card-title">${track.title}</p>
+          <p class="card-artist">${track.artist}</p>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+  } catch (err) {
+    document.getElementById('playlist-tracks').innerHTML = '<p>Fehler beim Laden der Playlist.</p>';
   }
 }
 
@@ -89,30 +132,15 @@ function playSong(track) {
   document.getElementById('player-title').innerText = track.title;
   document.getElementById('player-artist').innerText = track.artist;
 
-  document.getElementById('seek-bar').value = 0;
-  document.getElementById('current-time').innerText = '0:00';
-  document.getElementById('duration-time').innerText = '0:00';
-
-  audio.src = `/api/stream?id=${encodeURIComponent(track.id)}`;
-  audio.play()
-    .then(() => { document.getElementById('play-pause-btn').innerText = '⏸'; })
-    .catch(err => {
-      // AbortError = Nutzer hat schnell einen anderen Song gewählt, kein echter Fehler
-      if (err.name !== 'AbortError') console.warn('Wiedergabe nicht möglich:', err.message);
-      document.getElementById('play-pause-btn').innerText = '▶';
-    });
+  audio.src = `/api/stream?id=${track.id}`;
+  audio.play().catch(e => console.log('Audio Autoplay Blocked/Error', e));
+  document.getElementById('play-pause-btn').innerText = '⏸';
 }
-
-// Fehler beim Laden des Streams abfangen (z.B. Server liefert 500)
-audio.onerror = () => {
-  document.getElementById('play-pause-btn').innerText = '▶';
-  document.getElementById('player-artist').innerText = 'Stream konnte nicht geladen werden';
-};
 
 function togglePlay() {
   if (!audio.src) return;
   if (audio.paused) {
-    audio.play().catch(() => {});
+    audio.play();
     document.getElementById('play-pause-btn').innerText = '⏸';
   } else {
     audio.pause();
@@ -120,10 +148,9 @@ function togglePlay() {
   }
 }
 
-// Audio Fortschritt
 audio.ontimeupdate = () => {
   const seek = document.getElementById('seek-bar');
-  if (Number.isFinite(audio.duration) && audio.duration > 0) {
+  if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
     seek.value = (audio.currentTime / audio.duration) * 100;
     document.getElementById('current-time').innerText = formatTime(audio.currentTime);
     document.getElementById('duration-time').innerText = formatTime(audio.duration);
@@ -132,19 +159,8 @@ audio.ontimeupdate = () => {
 
 function seekAudio() {
   const seek = document.getElementById('seek-bar');
-  // duration ist NaN/Infinity, solange nichts geladen ist -> currentTime würde einen Fehler werfen
-  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
-  audio.currentTime = (seek.value / 100) * audio.duration;
-}
-
-// YouTube-Cookie lokal speichern (Formular im Login-Tab)
-function saveCookie(e) {
-  e.preventDefault();
-  try {
-    localStorage.setItem('yt-cookie', document.getElementById('cookie-input').value.trim());
-    alert('Cookie gespeichert.');
-  } catch (err) {
-    alert('Cookie konnte nicht gespeichert werden.');
+  if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+    audio.currentTime = (seek.value / 100) * audio.duration;
   }
 }
 
@@ -154,10 +170,10 @@ function changeVolume() {
 }
 
 function formatTime(sec) {
+  if (isNaN(sec)) return '0:00';
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// Start
 loadHome();
