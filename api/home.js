@@ -4,7 +4,7 @@ let youtube = null;
 
 export default async function handler(req, res) {
   try {
-    if (!youtube) youtube = await Innertube.create();
+    if (!youtube) youtube = await Innertube.create({ location: 'US', language: 'en' });
     const homeFeed = await youtube.music.getHomeFeed();
 
     const sections = homeFeed.sections?.map(sec => ({

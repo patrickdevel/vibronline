@@ -7,9 +7,9 @@ export default async function handler(req, res) {
   if (!q) return res.status(200).json({ results: [] });
 
   try {
-    if (!youtube) youtube = await Innertube.create();
+    if (!youtube) youtube = await Innertube.create({ location: 'US', language: 'en' });
     const searchResults = await youtube.music.search(q, { type: 'song' });
-    
+
     const results = searchResults.songs?.contents.map(song => ({
       id: song.id,
       title: song.title,
