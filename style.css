@@ -141,7 +141,6 @@ h1 {
   text-overflow: ellipsis;
 }
 
-/* Playlist Header */
 .back-btn {
   background-color: #2b2b30;
   color: white;
@@ -175,7 +174,6 @@ h1 {
   border-radius: 4px;
 }
 
-/* Search & Track List */
 .search-form {
   display: flex;
   gap: 12px;
@@ -230,7 +228,6 @@ h1 {
   object-fit: cover;
 }
 
-/* Player Bar */
 .player-bar {
   position: fixed;
   bottom: 0;

@@ -11,7 +11,6 @@ function switchTab(tabName) {
   if (tabName === 'home') loadHome();
 }
 
-// Home Feed Laden
 async function loadHome() {
   const container = document.getElementById('home-feed');
   container.innerHTML = '<p class="loading-text">Lade Musik-Empfehlungen...</p>';
@@ -50,7 +49,6 @@ async function loadHome() {
   }
 }
 
-// Klick auf Karte (Song vs Playlist)
 function onCardClick(item) {
   if (item.type === 'playlist' || item.id.startsWith('VL') || item.id.startsWith('PL') || item.id.startsWith('RD') || item.id.startsWith('MPRE')) {
     openPlaylist(item.id);
@@ -59,7 +57,6 @@ function onCardClick(item) {
   }
 }
 
-// Playlist Screen öffnen
 async function openPlaylist(playlistId) {
   switchTab('playlist');
   document.getElementById('playlist-title').innerText = 'Lade Playlist...';
@@ -69,7 +66,10 @@ async function openPlaylist(playlistId) {
     const res = await fetch(`/api/playlist?id=${encodeURIComponent(playlistId)}`);
     const data = await res.json();
 
-    document.getElementById('playlist-cover').src = data.thumbnail;
+    const coverImg = document.getElementById('playlist-cover');
+    coverImg.src = data.thumbnail || '';
+    coverImg.setAttribute('referrerpolicy', 'no-referrer');
+
     document.getElementById('playlist-title').innerText = data.title;
     document.getElementById('playlist-count').innerText = `${data.tracks.length} Songs`;
 
@@ -94,7 +94,6 @@ async function openPlaylist(playlistId) {
   }
 }
 
-// Suche
 async function handleSearch(e) {
   e.preventDefault();
   const q = document.getElementById('search-input').value;
@@ -124,7 +123,6 @@ async function handleSearch(e) {
   }
 }
 
-// Song abspielen
 function playSong(track) {
   currentTrack = track;
   document.getElementById('player-bar').classList.remove('hidden');
