@@ -1,108 +1,427 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>M3Play Web</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <meta name="description" content="YouTube Music Web Player Client" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { background: '#0f0f11', surface: '#1a1a1e', primary: '#e5484d', secondary: '#2b2b30' },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { background-color: #0f0f11; color: #fff; }
+    input[type="range"] { -webkit-appearance: none; appearance: none; background: #2b2b30; height: 4px; border-radius: 9999px; accent-color: #e5484d; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 9999px; background: #e5484d; }
+    input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 9999px; background: #e5484d; }
+    .nav-link.active { background: rgba(43,43,48,.7); color: #fff; }
+    .skeleton { background: linear-gradient(90deg,#1a1a1e 25%,#2b2b30 50%,#1a1a1e 75%); background-size: 200% 100%; animation: sh 1.4s infinite; }
+    @keyframes sh { to { background-position: -200% 0; } }
+  </style>
 </head>
-<body>
-
-  <aside class="sidebar">
-    <div class="logo">
-      <span class="logo-icon">🎵</span>
-      <h2>M3Play Web</h2>
-    </div>
-
-    <nav class="nav-links">
-      <button class="nav-btn active" onclick="switchTab('home')">🏠 Start</button>
-      <button class="nav-btn" onclick="switchTab('search')">🔍 Suchen</button>
-      <button class="nav-btn" onclick="switchTab('library')">📚 Bibliothek</button>
-      <button class="nav-btn" onclick="switchTab('login')">👤 YouTube Login</button>
-    </nav>
-  </aside>
-
-  <main class="content">
-
-    <!-- STARTSEITE -->
-    <section id="tab-home" class="tab-content active">
-      <h1>Willkommen bei M3Play</h1>
-      <p class="subtitle">Deine Lieblingsmusik direkt im Web streamen</p>
-      <div id="home-feed" class="sections-container">
-        <p class="loading-text">Lade Musik-Empfehlungen...</p>
-      </div>
-    </section>
-
-    <!-- PLAYLIST SCREEN -->
-    <section id="tab-playlist" class="tab-content">
-      <button class="back-btn" onclick="switchTab('home')">← Zurück</button>
-      <div id="playlist-header" class="playlist-header">
-        <img id="playlist-cover" src="" alt="Cover" referrerpolicy="no-referrer">
-        <div>
-          <span class="badge">PLAYLIST</span>
-          <h1 id="playlist-title">-</h1>
-          <p id="playlist-count" class="subtitle">0 Songs</p>
-        </div>
-      </div>
-      <div id="playlist-tracks" class="results-list"></div>
-    </section>
-
-    <!-- SUCHSEITE -->
-    <section id="tab-search" class="tab-content">
-      <h1>Suche</h1>
-      <form onsubmit="handleSearch(event)" class="search-form">
-        <input type="text" id="search-input" placeholder="Songs, Künstler oder Alben suchen..." required>
-        <button type="submit">Suchen</button>
-      </form>
-      <div id="search-results" class="results-list"></div>
-    </section>
-
-    <!-- BIBLIOTHEK -->
-    <section id="tab-library" class="tab-content">
-      <h1>Bibliothek</h1>
-      <div class="empty-state">
-        <p>🎵 Füge unter <strong>YouTube Login</strong> deinen Cookie ein, um Playlists zu laden.</p>
-      </div>
-    </section>
-
-    <!-- LOGIN -->
-    <section id="tab-login" class="tab-content">
-      <h1>YouTube Music Login</h1>
-      <p class="subtitle">Füge deinen YouTube-Cookie ein, um auf deine privaten Playlists zuzugreifen.</p>
-      <form onsubmit="saveCookie(event)" class="login-form">
-        <textarea id="cookie-input" rows="5" placeholder="SAPISID=...; HSID=...;" required></textarea>
-        <button type="submit">Cookie speichern</button>
-      </form>
-    </section>
-
-  </main>
-
-  <div id="player-bar" class="player-bar hidden">
-    <div class="track-info">
-      <img id="player-thumb" src="" alt="Thumbnail" referrerpolicy="no-referrer">
+<body class="bg-background text-white min-h-screen antialiased">
+  <div class="flex flex-col md:flex-row h-screen">
+    <!-- Sidebar -->
+    <aside class="md:w-64 bg-surface md:h-screen p-4 md:p-6 flex md:flex-col md:justify-between items-center md:items-stretch border-b md:border-b-0 md:border-r border-secondary/20 shrink-0">
       <div>
-        <p id="player-title" class="track-title">-</p>
-        <p id="player-artist" class="track-artist">-</p>
+        <a href="#/" class="flex items-center gap-3 md:mb-8">
+          <div class="p-2 bg-primary rounded-xl text-white" id="logo-icon"></div>
+          <h1 class="text-xl font-bold text-white tracking-wide hidden sm:block">M3Play Web</h1>
+        </a>
+        <nav class="hidden md:block space-y-2" id="nav-main"></nav>
+      </div>
+      <div class="flex items-center gap-1 md:block">
+        <nav class="md:hidden flex gap-1" id="nav-mobile"></nav>
+        <div id="nav-login"></div>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main id="view" class="flex-1 p-4 md:p-8 pb-32 overflow-y-auto"></main>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" role="alert" class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-[60] items-center gap-3 bg-primary text-white px-5 py-3 rounded-xl shadow-lg max-w-md">
+    <span id="toast-text" class="text-sm"></span>
+    <button id="toast-close" aria-label="Schließen"></button>
+  </div>
+
+  <!-- Player -->
+  <div id="player" class="hidden fixed bottom-0 left-0 right-0 h-24 bg-surface/95 backdrop-blur-md border-t border-secondary/30 px-3 md:px-6 items-center justify-between z-50">
+    <div class="flex items-center gap-3 md:gap-4 w-1/3 md:w-1/4 min-w-0">
+      <img id="p-thumb" src="" alt="" referrerpolicy="no-referrer" class="w-14 h-14 rounded-lg object-cover shadow-md shrink-0" />
+      <div class="overflow-hidden">
+        <p id="p-title" class="text-white font-medium truncate"></p>
+        <p id="p-artist" class="text-gray-400 text-sm truncate"></p>
       </div>
     </div>
-
-    <div class="player-controls">
-      <button id="play-pause-btn" onclick="togglePlay()">▶</button>
-      <div class="progress-container">
-        <span id="current-time">0:00</span>
-        <input type="range" id="seek-bar" value="0" min="0" max="100" oninput="seekAudio()">
-        <span id="duration-time">0:00</span>
+    <div class="flex flex-col items-center gap-2 w-1/3 md:w-2/4">
+      <button id="p-toggle" class="p-3 bg-primary text-white rounded-full hover:scale-105 transition" aria-label="Play/Pause"></button>
+      <div class="flex items-center gap-3 w-full max-w-md text-xs text-gray-400">
+        <span id="p-cur" class="w-8 text-right">0:00</span>
+        <input id="p-seek" type="range" min="0" max="100" value="0" step="0.1" class="w-full cursor-pointer" />
+        <span id="p-dur" class="w-8">0:00</span>
       </div>
     </div>
-
-    <div class="volume-control">
-      <span>🔊</span>
-      <input type="range" id="volume-bar" value="80" min="0" max="100" oninput="changeVolume()">
+    <div class="hidden sm:flex items-center gap-3 w-1/4 justify-end">
+      <span id="vol-icon" class="text-gray-400"></span>
+      <input id="p-vol" type="range" min="0" max="1" step="0.01" value="0.8" class="w-24 cursor-pointer" />
     </div>
   </div>
 
-  <audio id="audio-element"></audio>
+  <audio id="audio"></audio>
 
+<script>
+/* ---------- Icons (Lucide, inline) ---------- */
+const svg = (inner, size = 20, cls = '') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}">${inner}</svg>`;
+const ICON = {
+  play: (s, c) => svg('<polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/>', s, c),
+  pause: (s, c) => svg('<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>', s, c),
+  home: (s, c) => svg('<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>', s, c),
+  search: (s, c) => svg('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>', s, c),
+  library: (s, c) => svg('<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>', s, c),
+  user: (s, c) => svg('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>', s, c),
+  music: (s, c) => svg('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>', s, c),
+  volume: (s, c) => svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>', s, c),
+  x: (s, c) => svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', s, c),
+  key: (s, c) => svg('<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>', s, c),
+  back: (s, c) => svg('<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>', s, c),
+};
+
+/* ---------- Helpers ---------- */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const KIND_LABEL = { video: 'Video', playlist: 'Playlist', album: 'Album', artist: 'Künstler' };
+const fmtTime = (t) => { t = isFinite(t) ? t : 0; const m = Math.floor(t / 60), s = Math.floor(t % 60); return `${m}:${s < 10 ? '0' : ''}${s}`; };
+
+/* Track-Registry: Karten referenzieren Tracks per Index */
+let registry = [];
+const reg = (items) => items.map((it) => registry.push(it) - 1);
+
+/* ---------- Static UI ---------- */
+$('logo-icon').innerHTML = ICON.music(24);
+$('toast-close').innerHTML = ICON.x(16);
+$('vol-icon').innerHTML = ICON.volume(18);
+
+const NAV = [
+  { href: '#/', label: 'Start', icon: 'home', match: (p) => p === '/' },
+  { href: '#/search', label: 'Suchen', icon: 'search', match: (p) => p === '/search' },
+  { href: '#/library', label: 'Bibliothek', icon: 'library', match: (p) => p === '/library' },
+];
+const navCls = 'nav-link flex items-center gap-4 px-4 py-3 text-gray-300 hover:text-white hover:bg-secondary/50 rounded-xl transition';
+$('nav-main').innerHTML = NAV.map((n) => `<a href="${n.href}" data-path="${n.href.slice(1)}" class="${navCls}">${ICON[n.icon](20)}<span>${n.label}</span></a>`).join('');
+$('nav-mobile').innerHTML = NAV.map((n) => `<a href="${n.href}" data-path="${n.href.slice(1)}" aria-label="${n.label}" class="${navCls} !px-3">${ICON[n.icon](20)}</a>`).join('');
+$('nav-login').innerHTML = `<a href="#/login" data-path="/login" class="${navCls} !text-gray-400"><span>${ICON.user(20)}</span><span class="hidden md:inline">YouTube Login</span></a>`;
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function setError(msg) {
+  const t = $('toast');
+  clearTimeout(toastTimer);
+  if (!msg) { t.classList.add('hidden'); t.classList.remove('flex'); return; }
+  $('toast-text').textContent = msg;
+  t.classList.remove('hidden'); t.classList.add('flex');
+  toastTimer = setTimeout(() => setError(null), 5000);
+}
+$('toast-close').onclick = () => setError(null);
+
+/* ---------- Player ---------- */
+const audio = $('audio');
+let currentTrack = null;
+let isPlaying = false;
+audio.volume = 0.8;
+
+function renderToggle() {
+  $('p-toggle').innerHTML = isPlaying ? ICON.pause(20) : ICON.play(20, 'ml-0.5');
+}
+
+function playTrack(track) {
+  if (track.kind === 'video') return setError('Videos werden nicht unterstützt. Bitte wähle einen Song.');
+  if (track.kind && track.kind !== 'song') return setError('Das ist kein einzelner Song und kann nicht direkt abgespielt werden.');
+  setError(null);
+  currentTrack = track;
+  isPlaying = true;
+  $('player').classList.remove('hidden'); $('player').classList.add('flex');
+  $('p-thumb').src = track.thumbnail || '';
+  $('p-title').textContent = track.title;
+  $('p-artist').textContent = track.artist;
+  $('p-seek').value = 0; $('p-cur').textContent = '0:00'; $('p-dur').textContent = '0:00';
+  renderToggle();
+  audio.src = `/api/stream?id=${encodeURIComponent(track.id)}`;
+  audio.play().catch((e) => { if (e?.name !== 'AbortError') console.error(e); });
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title, artist: track.artist,
+      artwork: track.thumbnail ? [{ src: track.thumbnail }] : [],
+    });
+  }
+}
+
+function openItem(item) {
+  if (item.kind === 'playlist' || item.kind === 'album') {
+    location.hash = `#/playlist/${encodeURIComponent(item.id)}?kind=${item.kind}`;
+  } else {
+    playTrack(item);
+  }
+}
+
+$('p-toggle').onclick = () => {
+  if (!currentTrack) return;
+  if (isPlaying) { audio.pause(); isPlaying = false; }
+  else { audio.play(); isPlaying = true; }
+  renderToggle();
+};
+$('p-seek').oninput = (e) => { audio.currentTime = Number(e.target.value); };
+$('p-vol').oninput = (e) => { audio.volume = Number(e.target.value); };
+audio.ontimeupdate = () => { $('p-seek').value = audio.currentTime; $('p-cur').textContent = fmtTime(audio.currentTime); };
+audio.onloadedmetadata = () => { $('p-seek').max = audio.duration || 100; $('p-dur').textContent = fmtTime(audio.duration); };
+audio.onended = () => { isPlaying = false; renderToggle(); };
+audio.onerror = () => {
+  if (!audio.getAttribute('src')) return;
+  isPlaying = false; renderToggle();
+  setError('Dieser Titel konnte nicht geladen werden (evtl. ein Video oder nicht verfügbar).');
+};
+
+/* Klick-Delegation für alle Karten/Zeilen */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-idx]');
+  if (!el) return;
+  const item = registry[Number(el.dataset.idx)];
+  if (!item) return;
+  if (el.dataset.mode === 'track') {
+    item.kind === 'video' ? setError('Videos werden nicht unterstützt. Bitte wähle einen Song.') : playTrack(item);
+  } else {
+    openItem(item);
+  }
+});
+
+/* ---------- Views ---------- */
+const view = $('view');
+
+async function getJSON(url) {
+  const res = await fetch(url);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Fehler beim Laden');
+  return data;
+}
+
+/* Home */
+async function renderHome(token) {
+  view.innerHTML = `
+    <div class="space-y-10">
+      <header>
+        <h1 class="text-3xl font-bold text-white">Willkommen bei M3Play</h1>
+        <p class="text-gray-400 mt-1">Deine Lieblingsmusik direkt im Web streamen</p>
+      </header>
+      <div id="home-body" class="text-gray-400">Lade Musik-Empfehlungen...</div>
+    </div>`;
+  let sections = [];
+  try { sections = (await getJSON('/api/home')).sections || []; } catch (e) { console.error(e); }
+  if (token !== routeToken) return;
+
+  const body = $('home-body');
+  if (!sections.length) { body.textContent = 'Keine Empfehlungen verfügbar.'; return; }
+  body.className = 'space-y-10';
+  body.innerHTML = sections.map((section) => {
+    const idxs = reg(section.items);
+    return `
+      <section class="space-y-4">
+        <h2 class="text-xl font-semibold text-white">${esc(section.title)}</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          ${section.items.map((item, i) => `
+            <div data-idx="${idxs[i]}" class="bg-surface p-4 rounded-2xl hover:bg-secondary/60 transition group cursor-pointer relative border border-secondary/20">
+              <div class="relative mb-3 aspect-square rounded-xl overflow-hidden bg-secondary">
+                <img src="${esc(item.thumbnail)}" alt="${esc(item.title)}" referrerpolicy="no-referrer" loading="lazy" class="w-full h-full object-cover" />
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                  <div class="p-3 bg-primary rounded-full text-white shadow-lg">${ICON.play(20, 'ml-0.5')}</div>
+                </div>
+              </div>
+              <p class="font-medium text-white truncate">${esc(item.title)}</p>
+              <p class="text-sm text-gray-400 truncate">
+                ${item.kind && item.kind !== 'song' ? `<span class="mr-1 uppercase text-xs text-gray-500">${KIND_LABEL[item.kind] || ''} ·</span>` : ''}${esc(item.artist)}
+              </p>
+            </div>`).join('')}
+        </div>
+      </section>`;
+  }).join('');
+}
+
+/* Suche */
+function renderSearch() {
+  view.innerHTML = `
+    <div class="space-y-6 max-w-4xl">
+      <h1 class="text-3xl font-bold">Suche</h1>
+      <form id="search-form" class="relative">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">${ICON.search(20)}</span>
+        <input id="search-input" type="text" placeholder="Songs, Künstler oder Alben suchen..."
+          class="w-full bg-surface text-white pl-12 pr-4 py-4 rounded-2xl border border-secondary focus:outline-none focus:border-primary transition" />
+      </form>
+      <p id="search-status" class="text-gray-400 hidden">Suchen...</p>
+      <div id="search-results" class="space-y-2"></div>
+    </div>`;
+  const input = $('search-input');
+  input.value = lastQuery;
+  if (lastResults.length) drawResults(lastResults);
+  input.focus();
+
+  $('search-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (!q) return;
+    lastQuery = q;
+    $('search-status').classList.remove('hidden');
+    try {
+      const data = await getJSON(`/api/search?q=${encodeURIComponent(q)}`);
+      lastResults = data.results || [];
+    } catch (err) { console.error(err); lastResults = []; setError('Suche fehlgeschlagen.'); }
+    $('search-status').classList.add('hidden');
+    drawResults(lastResults);
+  };
+}
+let lastQuery = '', lastResults = [];
+function drawResults(results) {
+  const box = $('search-results');
+  if (!box) return;
+  const idxs = reg(results);
+  box.innerHTML = results.map((t, i) => `
+    <div data-idx="${idxs[i]}" class="flex items-center justify-between p-3 rounded-xl hover:bg-surface/80 transition cursor-pointer group">
+      <div class="flex items-center gap-4 min-w-0">
+        <img src="${esc(t.thumbnail)}" alt="${esc(t.title)}" referrerpolicy="no-referrer" loading="lazy" class="w-12 h-12 rounded-lg object-cover" />
+        <div class="min-w-0">
+          <p class="font-medium text-white truncate">${esc(t.title)}</p>
+          <p class="text-sm text-gray-400 truncate">
+            ${t.kind && t.kind !== 'song' ? `<span class="mr-2 px-1.5 py-0.5 rounded bg-secondary text-xs uppercase">${KIND_LABEL[t.kind] || ''}</span>` : ''}${esc(t.artist)}
+          </p>
+        </div>
+      </div>
+      <span class="p-2 bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white rounded-full transition">${ICON.play(18, 'ml-0.5')}</span>
+    </div>`).join('');
+}
+
+/* Bibliothek */
+function renderLibrary() {
+  view.innerHTML = `
+    <div class="space-y-6">
+      <h1 class="text-3xl font-bold">Bibliothek</h1>
+      <p class="text-gray-400">Deine gespeicherten Playlists und Lieblingssongs.</p>
+      <div class="p-12 border border-dashed border-secondary rounded-2xl flex flex-col items-center justify-center text-center space-y-4">
+        <div class="p-4 bg-secondary/50 rounded-full text-gray-400">${ICON.music(32)}</div>
+        <div>
+          <h3 class="text-lg font-medium text-white">Verbinde deinen YouTube-Account</h3>
+          <p class="text-sm text-gray-400">Füge deinen Cookie unter "YouTube Login" ein, um Playlists zu sehen.</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* Login */
+function renderLogin() {
+  let saved = '';
+  try { saved = localStorage.getItem('ytmusic_cookie') || ''; } catch {}
+  view.innerHTML = `
+    <div class="max-w-xl space-y-6">
+      <div>
+        <h1 class="text-3xl font-bold">YouTube Music Login</h1>
+        <p class="text-gray-400 mt-2">Um auf deine persönlichen Playlists zuzugreifen, kannst du hier deinen Cookie aus YouTube Music einfügen.</p>
+      </div>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">YouTube Music Cookie</label>
+          <textarea id="cookie" rows="5" placeholder="SAPISID=...; HSID=...;"
+            class="w-full bg-surface text-white p-4 rounded-xl border border-secondary focus:outline-none focus:border-primary transition text-sm font-mono"></textarea>
+        </div>
+        <button type="submit" class="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition">
+          ${ICON.key(18)}<span>Cookie speichern</span>
+        </button>
+        <p id="login-ok" class="text-green-400 text-sm hidden">Cookie erfolgreich gespeichert!</p>
+      </form>
+    </div>`;
+  $('cookie').value = saved;
+  $('login-form').onsubmit = (e) => {
+    e.preventDefault();
+    try { localStorage.setItem('ytmusic_cookie', $('cookie').value); } catch {}
+    const ok = $('login-ok');
+    ok.classList.remove('hidden');
+    setTimeout(() => ok.classList.add('hidden'), 3000);
+  };
+}
+
+/* Playlist / Album */
+async function renderPlaylist(id, kind, token) {
+  view.innerHTML = `
+    <div class="space-y-6 max-w-4xl">
+      <button id="back" class="flex items-center gap-2 text-gray-400 hover:text-white transition">${ICON.back(18)} Zurück</button>
+      <div id="pl-body"><p class="text-gray-400">Lade...</p></div>
+    </div>`;
+  $('back').onclick = () => (history.length > 1 ? history.back() : (location.hash = '#/'));
+
+  try {
+    const data = await getJSON(`/api/playlist?id=${encodeURIComponent(id)}&kind=${kind}`);
+    if (token !== routeToken) return;
+    const tracks = data.tracks || [];
+    const idxs = reg(tracks);
+    $('pl-body').innerHTML = `
+      <div class="space-y-6">
+        <div class="flex items-center gap-5">
+          ${data.cover ? `<img src="${esc(data.cover)}" alt="${esc(data.title)}" referrerpolicy="no-referrer" class="w-32 h-32 rounded-xl object-cover" />` : ''}
+          <h1 class="text-3xl font-bold">${esc(data.title)}</h1>
+        </div>
+        ${tracks.length === 0 ? '<p class="text-gray-400">Keine abspielbaren Songs gefunden.</p>' : ''}
+        <div class="space-y-2">
+          ${tracks.map((t, i) => `
+            <div data-idx="${idxs[i]}" data-mode="track" class="flex items-center justify-between p-3 rounded-xl hover:bg-surface/80 transition cursor-pointer group">
+              <div class="flex items-center gap-4 min-w-0">
+                <img src="${esc(t.thumbnail)}" alt="${esc(t.title)}" referrerpolicy="no-referrer" loading="lazy" class="w-12 h-12 rounded-lg object-cover" />
+                <div class="min-w-0">
+                  <p class="font-medium text-white truncate">${esc(t.title)}</p>
+                  <p class="text-sm text-gray-400 truncate">
+                    ${t.kind === 'video' ? '<span class="mr-2 px-1.5 py-0.5 rounded bg-secondary text-xs uppercase">Video</span>' : ''}${esc(t.artist)}
+                  </p>
+                </div>
+              </div>
+              <span class="p-2 bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white rounded-full transition">${ICON.play(18, 'ml-0.5')}</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  } catch (e) {
+    if (token !== routeToken) return;
+    $('pl-body').innerHTML = `<p class="text-primary">${esc(e.message)}</p>`;
+  }
+}
+
+/* ---------- Router (Hash) ---------- */
+let routeToken = 0;
+function route() {
+  const token = ++routeToken;
+  const raw = location.hash.slice(1) || '/';
+  const [path, qs = ''] = raw.split('?');
+  const params = new URLSearchParams(qs);
+
+  document.querySelectorAll('.nav-link').forEach((a) => {
+    a.classList.toggle('active', a.dataset.path === path);
+  });
+  view.scrollTop = 0;
+
+  if (path === '/') return renderHome(token);
+  if (path === '/search') return renderSearch();
+  if (path === '/library') return renderLibrary();
+  if (path === '/login') return renderLogin();
+  if (path.startsWith('/playlist/')) {
+    const id = decodeURIComponent(path.slice('/playlist/'.length));
+    return renderPlaylist(id, params.get('kind') === 'album' ? 'album' : 'playlist', token);
+  }
+  location.hash = '#/';
+}
+window.addEventListener('hashchange', route);
+renderToggle();
+route();
+</script>
 </body>
 </html>

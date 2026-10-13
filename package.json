@@ -1,9 +1,12 @@
 {
-  "name": "m3play-web-vanilla",
+  "name": "vibrmusiconline",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "dependencies": {
-    "youtubei.js": "^10.0.0"
+    "youtubei.js": "^18.1.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
