@@ -1,28 +1,21 @@
-import { Innertube } from 'youtubei.js';
-
-let youtube = null;
+import { getYouTube, mapItem } from './_ytmusic.js';
 
 export default async function handler(req, res) {
   try {
-    if (!youtube) youtube = await Innertube.create({ location: 'US', language: 'en' });
-    const homeFeed = await youtube.music.getHomeFeed();
+    const yt = await getYouTube();
+    const homeFeed = await yt.music.getHomeFeed();
 
-    const sections = homeFeed.sections?.map(sec => ({
-      title: sec.title?.text || 'Empfehlungen',
-      items: sec.contents?.map(item => {
-        const isPlaylist = item.id?.startsWith('VL') || item.id?.startsWith('PL') || item.id?.startsWith('RD') || item.id?.startsWith('MPRE') || item.type === 'Playlist' || item.type === 'Album';
-        return {
-          id: item.id,
-          type: isPlaylist ? 'playlist' : 'song',
-          title: item.title?.text || item.title || '',
-          artist: item.authors?.[0]?.name || item.subtitle?.text || 'YouTube Music',
-          thumbnail: item.thumbnails?.[0]?.url || ''
-        };
-      }).filter(i => i.id) || []
-    })) || [];
+    const sections = (homeFeed.sections || [])
+      .map((section) => ({
+        title: section.header?.title?.text || 'Empfehlungen',
+        items: (section.contents || []).map(mapItem).filter(Boolean),
+      }))
+      .filter((s) => s.items.length > 0);
 
+    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=3600');
     res.status(200).json({ sections });
-  } catch (err) {
-    res.status(500).json({ sections: [] });
+  } catch (error) {
+    console.error('Home feed error:', error);
+    res.status(500).json({ sections: [], error: 'Home feed failed' });
   }
 }

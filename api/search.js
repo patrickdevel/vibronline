@@ -1,24 +1,29 @@
-import { Innertube } from 'youtubei.js';
-
-let youtube = null;
+import { getYouTube, mapItem } from './_ytmusic.js';
 
 export default async function handler(req, res) {
-  const { q } = req.query;
+  const q = req.query?.q;
   if (!q) return res.status(200).json({ results: [] });
 
   try {
-    if (!youtube) youtube = await Innertube.create({ location: 'US', language: 'en' });
-    const searchResults = await youtube.music.search(q, { type: 'song' });
+    const yt = await getYouTube();
+    const search = await yt.music.search(q);
 
-    const results = searchResults.songs?.contents.map(song => ({
-      id: song.id,
-      title: song.title,
-      artist: song.artists?.[0]?.name || 'Unbekannt',
-      thumbnail: song.thumbnails?.[0]?.url || ''
-    })) || [];
+    const seen = new Set();
+    const results = [];
+    for (const shelf of search.contents || []) {
+      for (const raw of shelf.contents || []) {
+        const item = mapItem(raw);
+        if (!item || item.kind === 'artist') continue;
+        const key = `${item.kind}:${item.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push(item);
+      }
+    }
 
     res.status(200).json({ results });
-  } catch (err) {
-    res.status(500).json({ error: 'Search failed' });
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({ results: [], error: 'Search failed' });
   }
 }

@@ -1,43 +1,36 @@
-import { Innertube } from 'youtubei.js';
-
-let youtube = null;
+import { getYouTube, mapItem } from './_ytmusic.js';
 
 export default async function handler(req, res) {
-  const { id } = req.query;
-  if (!id) return res.status(400).json({ error: 'Missing Playlist ID' });
+  const id = req.query?.id;
+  const kind = req.query?.kind === 'album' ? 'album' : 'playlist';
+
+  if (!id) return res.status(400).json({ error: 'Missing ID' });
 
   try {
-    if (!youtube) youtube = await Innertube.create({ location: 'US', language: 'en' });
-    const cleanId = id.replace(/^VL/, '');
+    const yt = await getYouTube();
+    const data = kind === 'album' ? await yt.music.getAlbum(id) : await yt.music.getPlaylist(id.replace(/^VL/, ''));
 
-    let playlist;
-    try {
-      playlist = await youtube.music.getPlaylist(cleanId);
-    } catch (e) {
-      playlist = await youtube.music.getAlbum(cleanId);
-    }
+    const header = data.header;
+    const title = header?.title?.text || '';
+    const headerThumbs = header?.thumbnails || header?.thumbnail?.contents || [];
+    const cover = headerThumbs.length ? headerThumbs[headerThumbs.length - 1].url : '';
 
-    const title = playlist.header?.title?.text || playlist.title || 'Playlist';
-    const thumbnail = playlist.header?.thumbnails?.[0]?.url || playlist.thumbnails?.[0]?.url || '';
+    const rawItems = kind === 'album' ? data.contents || [] : data.items || [];
+    const albumArtist = header?.author?.name || header?.strapline_text_one?.text || '';
 
-    const rawTracks = playlist.videos || playlist.contents || [];
-    const tracks = rawTracks.map(song => {
-      const songId = song.id || song.video_id || song.videoId || song.endpoint?.payload?.videoId || '';
-      const songTitle = song.title?.text || song.title || '';
-      const songArtist = song.artists?.[0]?.name || song.author?.name || song.subtitle?.text || 'YouTube Music';
-      const songThumb = song.thumbnails?.[0]?.url || thumbnail;
+    const tracks = rawItems
+      .map((raw) => {
+        const item = mapItem(raw);
+        if (!item) return null;
+        if (!item.thumbnail) item.thumbnail = cover;
+        if (item.artist === 'YouTube Music' && albumArtist) item.artist = albumArtist;
+        return item;
+      })
+      .filter((t) => t && (t.kind === 'song' || t.kind === 'video'));
 
-      return {
-        id: songId,
-        title: songTitle,
-        artist: songArtist,
-        thumbnail: songThumb
-      };
-    }).filter(s => s.id && s.id !== 'undefined');
-
-    res.status(200).json({ title, thumbnail, tracks });
-  } catch (err) {
-    console.error('Playlist API error:', err);
-    res.status(500).json({ error: 'Failed to load playlist' });
+    res.status(200).json({ title, cover, tracks });
+  } catch (error) {
+    console.error('Playlist error:', error);
+    res.status(500).json({ error: 'Playlist konnte nicht geladen werden.' });
   }
 }
